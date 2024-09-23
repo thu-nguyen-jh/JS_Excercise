@@ -1,33 +1,33 @@
-const QUESTION_TYPE = 1;
-const ANSWER_TYPE = 2;
+const QUESTION_TYPE = "question";
+const ANSWER_TYPE = "answer";
 const decisionTree = {
     id: 1,
-    type: 1,
+    type: "question",
     question: "What type of meal are you in the mood for?",
     options: [{
             id: 2,
-            type: 2,
+            type: "answer",
             answer: "Light and fresh",
             next: {
                 id: 3,
-                type: 1,
+                type: "question",
                 question: "What kind of protein do you prefer?",
                 options: [{
                         id: 4,
-                        type: 2,
+                        type: "answer",
                         answer: "Seafood",
                         next: {
                             id: 5,
-                            type: 1,
+                            type: "question",
                             question: "Familiar or adventurous?",
                             options: [{
                                     id: 6,
-                                    type: 2,
+                                    type: "answer",
                                     answer: "Familiar",
                                 },
                                 {
                                     id: 7,
-                                    type: 2,
+                                    type: "answer",
                                     answer: "Adventurous",
                                 },
                             ],
@@ -35,7 +35,7 @@ const decisionTree = {
                     },
                     {
                         id: 8,
-                        type: 2,
+                        type: "answer",
                         answer: "Vegetarian",
                     },
                 ],
@@ -43,20 +43,20 @@ const decisionTree = {
         },
         {
             id: 9,
-            type: 2,
+            type: "answer",
             answer: "Hearty and filling",
             next: {
                 id: 10,
-                type: 1,
+                type: "question",
                 question: "Do you prefer meat or vegetarian options?",
                 options: [{
                         id: 11,
-                        type: 2,
+                        type: "answer",
                         answer: "Meat",
                     },
                     {
                         id: 12,
-                        type: 2,
+                        type: "answer",
                         answer: "Vegetarian",
                     },
                 ],
