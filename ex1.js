@@ -16,9 +16,6 @@ function findUniqueArrayUsingForLoop(a) {
 }
 
 function findUniqueArrayUsingSet() {
-  // for (let i = 0; i < a.length; i++) {
-  //   res.add(a[i])
-  // }
   return [...new Set(a)]
 }
 

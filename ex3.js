@@ -1,171 +1,212 @@
+const QUESTION_TYPE = 1;
+const ANSWER_TYPE = 2;
 const decisionTree = {
     id: 1,
-    question: "Can I guess your favorite food?",
-    options: [
-       {
-          id: 2,
-          text: "Is it liquid?",
-          next: {
-             id: 3,
-             question: "Is it a soup?",
-             options: [
-                {
-                   id: 4,
-                   text: "Yes",
-                   content: "You might like a hearty vegetable soup!",
-                },
-                { id: 5, text: "No", content: "Perhaps it's a smoothie or a juice?" },
-             ],
-          },
-       },
-       {
-          id: 6,
-          text: "Is it dry?",
-          next: {
-             id: 7,
-             question: "Is it crunchy?",
-             options: [
-                { id: 8, text: "Yes", content: "Could it be chips or crackers?" },
-                {
-                   id: 9,
-                   text: "No",
-                   content: "Maybe it's a type of bread or pastry?",
-                },
-             ],
-          },
-       },
-       {
-          id: 10,
-          text: "Is it a main course?",
-          next: {
-             id: 11,
-             question: "Does it contain meat?",
-             options: [
-                {
-                   id: 12,
-                   text: "Yes",
-                   next: {
-                      id: 13,
-                      question: "Is it grilled?",
-                      options: [
-                         {
-                            id: 14,
-                            text: "Yes",
-                            content: "Sounds like you enjoy grilled steak or chicken!",
-                         },
-                         {
-                            id: 15,
-                            text: "No",
-                            content: "Perhaps it's a hearty stew or casserole?",
-                         },
-                      ],
-                   },
-                },
-                {
-                   id: 16,
-                   text: "No",
-                   content:
-                      "You might be a fan of vegetarian dishes like pasta or stir-fry!",
-                },
-             ],
-          },
-       },
+    type: 1,
+    question: "What type of meal are you in the mood for?",
+    options: [{
+            id: 2,
+            type: 2,
+            answer: "Light and fresh",
+            next: {
+                id: 3,
+                type: 1,
+                question: "What kind of protein do you prefer?",
+                options: [{
+                        id: 4,
+                        type: 2,
+                        answer: "Seafood",
+                        next: {
+                            id: 5,
+                            type: 1,
+                            question: "Familiar or adventurous?",
+                            options: [{
+                                    id: 6,
+                                    type: 2,
+                                    answer: "Familiar",
+                                },
+                                {
+                                    id: 7,
+                                    type: 2,
+                                    answer: "Adventurous",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        id: 8,
+                        type: 2,
+                        answer: "Vegetarian",
+                    },
+                ],
+            },
+        },
+        {
+            id: 9,
+            type: 2,
+            answer: "Hearty and filling",
+            next: {
+                id: 10,
+                type: 1,
+                question: "Do you prefer meat or vegetarian options?",
+                options: [{
+                        id: 11,
+                        type: 2,
+                        answer: "Meat",
+                    },
+                    {
+                        id: 12,
+                        type: 2,
+                        answer: "Vegetarian",
+                    },
+                ],
+            },
+        },
     ],
- };
- 
- 
- // Function to add a node
- function addNode(parent, newOption) {
-    parent.options.push(newOption);
- }
- 
- 
- // Function to edit a node
- function editNode(node, newContent) {
-    if (node.content) {
-       node.content = newContent;
-    } else if (node.question) {
-       node.question = newContent;
-    } else {
-       node.text = newContent;
+};
+
+
+function createQuestion(id, question, options = []) {
+    return {
+        id,
+        type: QUESTION_TYPE,
+        question,
+        options,
+    };
+}
+
+
+function createAnswer(id, answer, next = null) {
+    return {
+        id,
+        type: ANSWER_TYPE,
+        answer,
+        next,
+    };
+}
+
+
+function findNodeById(node, id) {
+    if (node.id === id) {
+        return node;
     }
- }
- 
- 
- // Function to delete a node
- function deleteNode(parent, optionId) {
-    parent.options = parent.options.filter((option) => option.id !== optionId);
- }
- 
- 
- // Helper function to find a node by id
- function findNodeById(dt, id) {
-    if (dt.id === id) {
-       return dt;
-    }
-    if (dt.options) {
-       for (const option of dt.options) {
-          const found = findNodeById(option, id);
-          if (found) return found;
-          if (option.next) {
-             const foundInNext = findNodeById(option.next, id);
-             if (foundInNext) return foundInNext;
-          }
-       }
+    if (node.type === QUESTION_TYPE) {
+        // Question
+        for (const option of node.options) {
+            const found = findNodeById(option, id);
+            if (found) return found;
+        }
+    } else if (node.type === ANSWER_TYPE && node.next) {
+        // Answer
+        return findNodeById(node.next, id);
     }
     return null;
- }
- 
- 
- // Function to add a node by parent id
- function addNodeById(dt, parentId, newOption) {
-    const parent = findNodeById(dt, parentId);
-    if (parent) {
-       if (!parent.options) {
-          parent.options = [];
-       }
-       parent.options.push(newOption);
-    } else {
-       console.log("Parent node not found.");
+}
+
+
+function addNode(tree, parentId, newNode) {
+    const parent = findNodeById(tree, parentId);
+    if (!parent) {
+        throw new Error("Parent node not found");
     }
- }
- 
- 
- // Function to edit a node by id
- function editNodeById(dt, nodeId, newContent) {
-    const node = findNodeById(dt, nodeId);
-    if (node) {
-       editNode(node, newContent);
+
+    if (parent.type === QUESTION_TYPE) {
+        // Question
+        if (newNode.type !== ANSWER_TYPE) {
+            throw new Error("Can only add Answer nodes to a Question node");
+        }
+        parent.options.push(newNode);
+    } else if (parent.type === ANSWER_TYPE) {
+        // Answer
+        if (newNode.type !== QUESTION_TYPE) {
+            throw new Error("Can only add Question nodes to an Answer node");
+        }
+        if (parent.next) {
+            throw new Error("Answer node already has a next Question");
+        }
+        parent.next = newNode;
     } else {
-       console.log("Node not found.");
+        // Add a type is not Question or Answer
+        throw new Error("Invalid parent node type");
     }
- }
- 
- 
- // Function to delete a node by parent id and option id
- function deleteNodeById(dt, parentId, optionId) {
-    const parent = findNodeById(dt, parentId);
-    if (parent && parent.options) {
-       deleteNode(parent, optionId);
+}
+
+
+function editNode(tree, nodeId, newContent) {
+    const node = findNodeById(tree, nodeId);
+    if (typeof newContent !== "string") {
+        throw new Error("New content must be a string");
+    }
+
+
+    if (!node) {
+        throw new Error("Node not found");
+    }
+
+
+    if (node.type === QUESTION_TYPE) {
+        // Question
+        node.question = newContent;
+    } else if (node.type === ANSWER_TYPE) {
+        // Answer
+        node.answer = newContent;
     } else {
-       console.log("Parent node not found or has no options.");
+        throw new Error("Invalid node type");
     }
- }
- 
- 
- // Example usage:
- addNodeById(decisionTree, 7, {
-    id: 17,
-    text: "Is it sweet?",
-    content: "You might enjoy cookies or pastries!",
- });
- 
- 
- editNodeById(decisionTree, 5, "It could be a refreshing beverage!");
- 
- 
- deleteNodeById(decisionTree, 11, 16);
- 
- 
- console.log(JSON.stringify(decisionTree, null, 2));
- 
+}
+
+
+function findParentNode(node, childId) {
+    if (node.type === QUESTION_TYPE) {
+        // Question
+        for (const option of node.options) {
+            if (option.id === childId) {
+                return node;
+            }
+            const found = findParentNode(option, childId);
+            if (found) return found;
+        }
+    } else if (node.type === ANSWER_TYPE && node.next) {
+        // Answer
+        if (node.next.id === childId) {
+            return node;
+        }
+        return findParentNode(node.next, childId);
+    }
+    return null;
+}
+
+
+function deleteNode(tree, nodeId) {
+    const nodeToDelete = findNodeById(tree, nodeId);
+    if (!nodeToDelete) {
+        throw new Error("Node to delete not found.");
+    }
+
+
+    const parent = findParentNode(tree, nodeId);
+    if (!parent) {
+        throw new Error("Cannot delete the root node.");
+    }
+
+
+    if (parent.type === QUESTION_TYPE) {
+        // Parent is Question then Current Node will be Answer
+        parent.options = parent.options.filter((option) => option.id !== nodeId);
+    } else if (parent.type === ANSWER_TYPE) {
+        // Parent is Answer then Current Node will be a Question
+        parent.next = null;
+    }
+}
+
+
+
+addNode(
+    decisionTree,
+    7,
+    createQuestion(26, "Do you prefer raw or cooked fish?")
+);
+editNode(decisionTree, 5, "Do you prefer traditional or fusion cuisine?");
+deleteNode(decisionTree, 6);
+
+console.log(JSON.stringify(decisionTree, null, 2));
