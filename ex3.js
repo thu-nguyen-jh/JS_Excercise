@@ -1,212 +1,198 @@
+import config from "./configEx.js";
+
 const QUESTION_TYPE = "question";
 const ANSWER_TYPE = "answer";
-const decisionTree = {
-    id: 1,
-    type: "question",
-    question: "What type of meal are you in the mood for?",
-    options: [{
-            id: 2,
-            type: "answer",
-            answer: "Light and fresh",
-            next: {
-                id: 3,
-                type: "question",
-                question: "What kind of protein do you prefer?",
-                options: [{
-                        id: 4,
-                        type: "answer",
-                        answer: "Seafood",
-                        next: {
-                            id: 5,
-                            type: "question",
-                            question: "Familiar or adventurous?",
-                            options: [{
-                                    id: 6,
-                                    type: "answer",
-                                    answer: "Familiar",
-                                },
-                                {
-                                    id: 7,
-                                    type: "answer",
-                                    answer: "Adventurous",
-                                },
-                            ],
-                        },
-                    },
-                    {
-                        id: 8,
-                        type: "answer",
-                        answer: "Vegetarian",
-                    },
-                ],
-            },
-        },
-        {
-            id: 9,
-            type: "answer",
-            answer: "Hearty and filling",
-            next: {
-                id: 10,
-                type: "question",
-                question: "Do you prefer meat or vegetarian options?",
-                options: [{
-                        id: 11,
-                        type: "answer",
-                        answer: "Meat",
-                    },
-                    {
-                        id: 12,
-                        type: "answer",
-                        answer: "Vegetarian",
-                    },
-                ],
-            },
-        },
-    ],
-};
 
+class Node {
+    constructor(id, type, content, option, next) {
+        this.id = id;
+        this.type = type;
+        this[QUESTION_TYPE === type ? "question" : "answer"] = content;
+        this.options = option || [];
+        this.next = next || null;
+    }
 
-function createQuestion(id, question, options = []) {
-    return {
-        id,
-        type: QUESTION_TYPE,
-        question,
-        options,
-    };
+    addOption(option) {
+        if (this.type !== QUESTION_TYPE) {
+            throw new Error("Can only add options to a Question node");
+        }
+        this.options.push(option);
+    }
+
+    setNext(next) {
+        if (this.type !== ANSWER_TYPE) {
+            throw new Error("Can only set next node for an Answer node");
+        }
+        this.next = next;
+    }
 }
 
-
-function createAnswer(id, answer, next = null) {
-    return {
-        id,
-        type: ANSWER_TYPE,
-        answer,
-        next,
-    };
-}
-
-
-function findNodeById(node, id) {
+const findNodeById = context => (node, id, object) => {
+    const nodeType = node.type;
     if (node.id === id) {
         return node;
     }
-    if (node.type === QUESTION_TYPE) {
-        // Question
+    if (nodeType === QUESTION_TYPE) {
         for (const option of node.options) {
-            const found = findNodeById(option, id);
-            if (found) return found;
-        }
-    } else if (node.type === ANSWER_TYPE && node.next) {
-        // Answer
-        return findNodeById(node.next, id);
-    }
-    return null;
-}
-
-
-function addNode(tree, parentId, newNode) {
-    const parent = findNodeById(tree, parentId);
-    if (!parent) {
-        throw new Error("Parent node not found");
-    }
-
-    if (parent.type === QUESTION_TYPE) {
-        // Question
-        if (newNode.type !== ANSWER_TYPE) {
-            throw new Error("Can only add Answer nodes to a Question node");
-        }
-        parent.options.push(newNode);
-    } else if (parent.type === ANSWER_TYPE) {
-        // Answer
-        if (newNode.type !== QUESTION_TYPE) {
-            throw new Error("Can only add Question nodes to an Answer node");
-        }
-        if (parent.next) {
-            throw new Error("Answer node already has a next Question");
-        }
-        parent.next = newNode;
-    } else {
-        // Add a type is not Question or Answer
-        throw new Error("Invalid parent node type");
-    }
-}
-
-
-function editNode(tree, nodeId, newContent) {
-    const node = findNodeById(tree, nodeId);
-    if (typeof newContent !== "string") {
-        throw new Error("New content must be a string");
-    }
-
-
-    if (!node) {
-        throw new Error("Node not found");
-    }
-
-
-    if (node.type === QUESTION_TYPE) {
-        // Question
-        node.question = newContent;
-    } else if (node.type === ANSWER_TYPE) {
-        // Answer
-        node.answer = newContent;
-    } else {
-        throw new Error("Invalid node type");
-    }
-}
-
-
-function findParentNode(node, childId) {
-    if (node.type === QUESTION_TYPE) {
-        // Question
-        for (const option of node.options) {
-            if (option.id === childId) {
+            if (option.id === id && object === config.PARENT_NODE) {
                 return node;
             }
-            const found = findParentNode(option, childId);
+            const found = context.findNodeById(option, id, object);
             if (found) return found;
         }
-    } else if (node.type === ANSWER_TYPE && node.next) {
-        // Answer
-        if (node.next.id === childId) {
+    } else if (nodeType === ANSWER_TYPE && node.next) {
+        if (node.next.id === id && object === config.PARENT_NODE) {
             return node;
         }
-        return findParentNode(node.next, childId);
+        return context.findNodeById(node.next, id, object);
     }
     return null;
 }
 
+class DecisionTree {
+    constructor(root) {
+        this.root = root;
 
-function deleteNode(tree, nodeId) {
-    const nodeToDelete = findNodeById(tree, nodeId);
-    if (!nodeToDelete) {
-        throw new Error("Node to delete not found.");
+        this.findNodeById = this.findNodeById.bind(this);
+        this.addNode = this.addNode.bind(this);
+        this.editNode = this.editNode.bind(this);
+        this.deleteNode = this.deleteNode.bind(this);
+        this.createAnswer = this.createAnswer.bind(this);
+        this.createQuestion = this.createQuestion.bind(this);
+        this.node = {
+            get: this.findNodeById,
+            add: this.addNode,
+            update: this.editNode,
+            delete: this.deleteNode,
+        };
+        this.create = {
+            answer: this.createAnswer,
+            question: this.createQuestion,
+        };
     }
 
-
-    const parent = findParentNode(tree, nodeId);
-    if (!parent) {
-        throw new Error("Cannot delete the root node.");
+    findNodeById(node, id, object) {
+        const nodeType = node.type;
+        if (node.id === id) {
+            return node;
+        }
+        if (nodeType === QUESTION_TYPE) {
+            for (const option of node.options) {
+                if (option.id === id && object === config.PARENT_NODE) {
+                    return node;
+                }
+                const found = this.findNodeById(option, id, object);
+                if (found) return found;
+            }
+        } else if (nodeType === ANSWER_TYPE && node.next) {
+            if (node.next.id === id && object === config.PARENT_NODE) {
+                return node;
+            }
+            return this.findNodeById(node.next, id, object);
+        }
+        return null;
     }
 
+    addNode(parentId, newNode) {
+        const parent = this.findNodeById(this.root, parentId, config.CHILD_NODE);
+        if (!parent) throw new Error("Parent node not found");
 
-    if (parent.type === QUESTION_TYPE) {
-        // Parent is Question then Current Node will be Answer
-        parent.options = parent.options.filter((option) => option.id !== nodeId);
-    } else if (parent.type === ANSWER_TYPE) {
-        // Parent is Answer then Current Node will be a Question
-        parent.next = null;
+        if (parent.type === QUESTION_TYPE && newNode.type === ANSWER_TYPE) {
+            parent.addOption(newNode);
+        } else if (parent.type === ANSWER_TYPE && newNode.type === QUESTION_TYPE) {
+            if (parent.next)
+                throw new Error("Answer node already has a next Question");
+            parent.setNext(newNode);
+        } else {
+            throw new Error("Invalid parent node type");
+        }
+    }
+
+    createQuestion(id, question) {
+        return new Node(id, QUESTION_TYPE, question);
+    }
+
+    createAnswer(id, answer, next = null) {
+        const answerNode = new Node(id, ANSWER_TYPE, answer);
+        if (next) answerNode.setNext(next);
+        return answerNode;
+    }
+
+    editNode(nodeId, newContent) {
+        const node = this.findNodeById(this.root, nodeId, config.CHILD_NODE);
+        if (!node) throw new Error("Node not found");
+        const nodeType = node && node.type;
+        if (typeof newContent !== "string")
+            throw new Error("New content must be a string");
+
+        if (nodeType === QUESTION_TYPE) {
+            node.question = newContent;
+        } else if (nodeType === ANSWER_TYPE) {
+            node.answer = newContent;
+        } else {
+            throw new Error("Invalid node type");
+        }
+    }
+
+    deleteNode(nodeId) {
+        if (!this.findNodeById(this.root, nodeId, config.CHILD_NODE))
+            throw new Error("Node to delete not found.");
+
+        const parent = this.findNodeById(this.root, nodeId, config.PARENT_NODE);
+        if (!parent) throw new Error("Cannot delete the root node.");
+        const parentType = parent.type;
+        if (parentType === QUESTION_TYPE) {
+            parent.options = parent.options.filter((option) => option.id !== nodeId);
+        } else if (parentType === ANSWER_TYPE) {
+            parent.next = null;
+        }
     }
 }
 
+// Create nodes from the data
+const createNodeFromData = (data) => {
+    const node = new Node(
+        data.id,
+        data.type,
+        data[QUESTION_TYPE === data.type ? "question" : "answer"]
+    );
+    if (data.options) {
+        for (const option of data.options) {
+            const childNode = createNodeFromData(option);
+            node.addOption(childNode);
+            if (option.next) {
+                const nextNode = createNodeFromData(option.next);
+                childNode.setNext(nextNode);
+            }
+        }
+    }
+    return node;
+};
 
+// Initialize the decision tree
+const rootNode = createNodeFromData(config.DECISION_TREE);
+const decisionTree = new DecisionTree(rootNode);
 
-addNode(
-    decisionTree,
+decisionTree.node.add(
     7,
-    createQuestion(26, "Do you prefer raw or cooked fish?")
+    decisionTree.create.question(26, "Do you prefer raw or cooked fish?")
 );
-editNode(decisionTree, 5, "Do you prefer traditional or fusion cuisine?");
-deleteNode(decisionTree, 6);
+decisionTree.node.add(3, decisionTree.create.answer(27, "Korean"));
 
-console.log(JSON.stringify(decisionTree, null, 2));
+decisionTree.node.update(5, "Do you prefer traditional or fusion cuisine?");
+decisionTree.node.delete(6);
+
+// Example usage
+console.log(JSON.stringify(decisionTree.root, null, 2));
+
+// const myDecisionTree = new DecisionTree(config.DECISION_TREE)
+
+// myDecisionTree.addNode({
+//     tree: myDecisionTree,
+//     parentId: 7,
+//     newNode: myDecisionTree.createQuestion({ id: 26, question: "Do you prefer raw or cooked fish?" })
+// });
+// myDecisionTree.editNode({ tree: myDecisionTree, nodeId: 5, newContent: "Do you prefer traditional or fusion cuisine?" });
+// myDecisionTree.deleteNode({ tree: myDecisionTree, nodeId: 6 });
+
+// console.log(JSON.stringify(myDecisionTree.getTree(), null, 2));

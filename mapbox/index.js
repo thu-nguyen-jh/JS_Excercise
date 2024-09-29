@@ -1,71 +1,93 @@
-(function() {
-  mapboxgl.accessToken = 'pk.eyJ1IjoiaHV5aGExNzA1IiwiYSI6ImNtMHdsbnF6NzAyemgybHExeG1hc3Z3djkifQ.HZG1Idf72pop2QSHkf7vug';
+import config from "./config.js";
 
-  const map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/streets-v11',
-    center: [106.66, 10.76],
-    zoom: 11
-  });
+const {
+    MAPBOX_TOKEN,
+    API_RESULT_LIMIT,
+    MAP_STYLE,
+    MY_COORDINATE,
+    MAP_ZOOM,
+    SUGGESTION_ID,
+    LOCATION_INPUT_ID,
+    MY_LOCATION_NAME,
+    CARD_CLASSNAME,
+} = config
 
-  const marker = new mapboxgl.Marker()
-    .setLngLat([106.66, 10.76])
-    .addTo(map);
+const suggestionElement = document.getElementById(SUGGESTION_ID);
+const locationInputElement = document.getElementById(LOCATION_INPUT_ID);
 
-  const popup = new mapboxgl.Popup()
-    .setHTML('<div class="info-card"><h3>Ho Chi Minh City</h3><p>Long: 106.66 <br> Lat: 10.76</p></div>')
-    .setLngLat([106.66, 10.76])
-    .addTo(map);
+// Function to set Marker and Popup on the map
+function setMarker(coordinate, locationName, map, popup, marker) {
+    popup
+        .setHTML(
+            `<div class=${CARD_CLASSNAME}><h3>${locationName}</h3><p>Long: ${coordinate[0]} <br> Lat: ${coordinate[1]}</p></div>`
+        )
+        .setLngLat(coordinate)
+        .addTo(map);
+    marker.setLngLat(coordinate).addTo(map).setPopup(popup);
+}
 
-  marker.setPopup(popup); 
+function initializeMap() {
 
-  function updateLocation(longLat, placeName) {
-    const infoCard = document.createElement('div');
-    infoCard.className = 'info-card';
-    infoCard.innerHTML = `<h3>${placeName}</h3><p>Long: ${longLat[0]} <br> Lat: ${longLat[1]}</p>`;
-    console.log(longLat);
-    
-    popup.setDOMContent(infoCard); 
-    popup.setLngLat(longLat); 
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    // const { Map, Popup, Marker } = mapboxgl;
+    const map = new mapboxgl.Map({
+        container: "map",
+        style: MAP_STYLE,
+        center: MY_COORDINATE,
+        zoom: MAP_ZOOM,
+    });
 
-    marker.setLngLat(longLat)
-      .setPopup(popup) 
-      .addTo(map); 
-    
-    map.flyTo({ center: longLat, zoom: 11 });
-  }
+    const popup = new mapboxgl.Popup();
+    const marker = new mapboxgl.Marker();
 
-  function getSuggestion(query) {
+
+    // Set default location
+    setMarker(MY_COORDINATE, MY_LOCATION_NAME, map, popup, marker);
+
+}
+
+function onClickSuggestion(element) {
+    element.addEventListener("click", function() {
+        const coords = this.getAttribute("coordinates").split(",").map(Number);
+        const placeName = this.getAttribute("placeName");
+
+        setMarker(coords, placeName, );
+        map.flyTo({ center: coords, zoom: MAP_ZOOM });
+
+        suggestionElement.innerHTML = "";
+        locationInputElement.value = placeName;
+    });
+}
+// Get suggestions when searching for a location
+function onSearchSuggestion(query) {
     if (query.length < 3) {
-      document.getElementById('suggestions').innerHTML = '';
-      return;
+        suggestionElement.innerHTML = "";
+        return;
     }
 
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxgl.accessToken}&autocomplete=true&limit=5`;
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+      query
+    )}.json?access_token=${mapboxgl.accessToken}&autocomplete=true&limit=${
+      API_RESULT_LIMIT
+    }`;
+    return fetch(url)
+        .then((response) => response.json())
+}
 
-    fetch(url)
-      .then(response => response.json())
-      .then(data => {
-        const suggestions = data.features.map(sugesstion => {
-          return `<li coordinates="${sugesstion.geometry.coordinates}" placeName="${sugesstion.place_name}">${sugesstion.place_name}</li>`;
-        }).join('');
+function createSuggestions(data) {
+    const suggestions = data.features.map((suggestion) => {
+            return `<li coordinates="${suggestion.center}" placeName="${suggestion.place_name}">${suggestion.place_name}</li>`;
+        })
+        .join("");
 
-        document.getElementById('suggestions').innerHTML = suggestions;
+    suggestionElement.innerHTML = suggestions;
 
-        document.querySelectorAll('li').forEach(li => {
-          li.addEventListener('click', function () {
-            const coords = this.getAttribute('coordinates').split(',').map(Number);
-            const placeName = this.getAttribute('placeName');
-            updateLocation(coords, placeName);
-            document.getElementById('suggestions').innerHTML = ''; 
-            document.getElementById('location-input').value = placeName; 
-          });
-        });
-      });
-  }
+    document.querySelectorAll("li").forEach((li) => onClickSuggestion(li));
+}
 
-  document.getElementById('location-input').addEventListener('input', function () {
-    getSuggestion(this.value);
-  });
-
-})();
+locationInputElement.addEventListener("input", async function() {
+    const data = await onSearchSuggestion(this.value);
+    if (data) createSuggestions(data)
+});
+// Call the function to initialize the map
+initializeMap(config);
