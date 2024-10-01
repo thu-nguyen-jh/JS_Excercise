@@ -1,27 +1,13 @@
 import config from "./config.js";
 
-let mainPhotoIndex = 1;
-let isRunAnimation = false;
-const numsImageShow = config.NUM_IMG_SHOW;
-const gapBetweenImage = config.GAP_IMAGE;
+const updateCarousel = (mainPhotoIndex, isRunAnimation, imageWidth, carousel, config) => {
 
-const {
-    CAROUSEL_CONTAINER_SELECTOR,
-    LEFT_BUTTON_SELECTOR,
-    RIGHT_BUTTON_SELECTOR,
-    FIRST_IMG_SELECTOR,
-    CAROUSEL_ITEM_SELECTOR,
-    CAROUSEL_UNDISPLAY_CLASSNAME,
-    CAROUSEL_TRANSITION_STYLE
-} = config;
+    const {
+        CAROUSEL_ITEM_SELECTOR,
+        CAROUSEL_UNDISPLAY_CLASSNAME,
+        CAROUSEL_TRANSITION_STYLE
+    } = config;
 
-const carousel = document.querySelector(CAROUSEL_CONTAINER_SELECTOR);
-const leftButton = document.querySelector(LEFT_BUTTON_SELECTOR);
-const rightButton = document.querySelector(RIGHT_BUTTON_SELECTOR);
-const firstImage = carousel.querySelector(FIRST_IMG_SELECTOR);
-
-
-const updateCarousel = (imageWidth) => {
     // isRunAnimation use to stop click button too much time, avoid overlapping
     isRunAnimation = true;
     const items = carousel.querySelectorAll(CAROUSEL_ITEM_SELECTOR);
@@ -43,30 +29,46 @@ const updateCarousel = (imageWidth) => {
 };
 
 window.addEventListener("load", () => {
+    const {
+        CAROUSEL_CONTAINER_SELECTOR,
+        LEFT_BUTTON_SELECTOR,
+        RIGHT_BUTTON_SELECTOR,
+        FIRST_IMG_SELECTOR,
+        NUM_IMG_SHOW,
+        GAP_IMAGE
+    } = config;
+
+    const carousel = document.querySelector(CAROUSEL_CONTAINER_SELECTOR);
+    const leftButton = document.querySelector(LEFT_BUTTON_SELECTOR);
+    const rightButton = document.querySelector(RIGHT_BUTTON_SELECTOR);
+    const firstImage = carousel.querySelector(FIRST_IMG_SELECTOR);
 
     const firstImageMarginRight = parseInt(
         getComputedStyle(firstImage).marginRight
     );
     // Auto get the size of first image by use offsetWidth represent for image width size
     const imageWidth =
-        firstImage.offsetWidth + firstImageMarginRight + gapBetweenImage;
+        firstImage.offsetWidth + firstImageMarginRight + GAP_IMAGE;
+
+    let mainPhotoIndex = 1;
+    let isRunAnimation = false;
 
     leftButton.addEventListener("click", () => {
         // Mean the min limit is when mainPhotoIndex = 1, that we can't slide to left
         if (mainPhotoIndex >= numsImageShow - 1 && !isRunAnimation) {
             mainPhotoIndex -= 1;
-            updateCarousel(imageWidth);
+            updateCarousel(mainPhotoIndex, isRunAnimation, imageWidth, carousel, config);
         }
     });
 
     rightButton.addEventListener("click", () => {
         // carousel.children.length is the nums total images
         if (
-            mainPhotoIndex <= carousel.children.length - numsImageShow &&
+            mainPhotoIndex <= carousel.children.length - NUM_IMG_SHOW &&
             !isRunAnimation
         ) {
             mainPhotoIndex += 1;
-            updateCarousel(imageWidth);
+            updateCarousel(mainPhotoIndex, isRunAnimation, imageWidth, carousel, config);
         }
     });
 });
